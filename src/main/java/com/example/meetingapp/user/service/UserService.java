@@ -1,6 +1,7 @@
 package com.example.meetingapp.user.service;
 
 import com.example.meetingapp.config.CacheConfig;
+import com.example.meetingapp.outbox.OutboxService;
 import com.example.meetingapp.user.dto.CreateUserRequest;
 import com.example.meetingapp.user.dto.UpdateStatusRequest;
 import com.example.meetingapp.user.dto.UpdateUserRequest;
@@ -12,7 +13,7 @@ import com.example.meetingapp.user.entity.UserStatus;
 import com.example.meetingapp.user.exception.DuplicateUserException;
 import com.example.meetingapp.user.exception.UserDeletedException;
 import com.example.meetingapp.user.exception.UserNotFoundException;
-import com.example.meetingapp.user.kafka.UserEventProducer;
+import com.example.meetingapp.user.kafka.*;
 import com.example.meetingapp.user.mapper.UserMapper;
 import com.example.meetingapp.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +25,9 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.OffsetDateTime;
+import java.util.UUID;
+
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -31,7 +35,7 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final UserMapper userMapper;
-    private final UserEventProducer userEventProducer;
+    private final OutboxService outboxService;
 
     @Transactional
     public UserResponse createUser(CreateUserRequest request) {
@@ -51,14 +55,24 @@ public class UserService {
         user.setUserInfo(userInfo);
 
         user = userRepository.save(user);
-        userEventProducer.publishUserCreated(user);
+        outboxService.enqueueEvent(
+                "USER",
+                user.getId().toString(),
+                UserCreatedEvent.of(
+                        user.getId(),
+                        user.getUsername(),
+                        user.getEmail(),
+                        user.getStatus(),
+                        user.getRole().name()
+                )
+        );
 
         return userMapper.toResponse(user);
     }
 
     @Transactional(readOnly = true)
     @Cacheable(value = CacheConfig.USER_CACHE_NAME, key = "#id")
-    public UserResponse getUser(Long id) {
+    public UserResponse getUser(UUID id) {
         User user = getUserOrElseThrow(id);
         if (user.getStatus() == UserStatus.DELETED) {
             throw new UserDeletedException(id);
@@ -66,7 +80,7 @@ public class UserService {
         return userMapper.toResponse(user);
     }
 
-    private @NonNull User getUserOrElseThrow(Long id) {
+    private @NonNull User getUserOrElseThrow(UUID id) {
         return userRepository.findById(id)
                 .orElseThrow(() -> new UserNotFoundException(id));
     }
@@ -84,7 +98,7 @@ public class UserService {
 
     @Transactional
     @CachePut(value = CacheConfig.USER_CACHE_NAME, key = "#id")
-    public UserResponse updateUser(Long id, UpdateUserRequest request) {
+    public UserResponse updateUser(UUID id, UpdateUserRequest request) {
         User user = getUserOrElseThrow(id);
         if (user.getStatus() == UserStatus.DELETED) {
             throw new UserDeletedException(id);
@@ -104,7 +118,17 @@ public class UserService {
         userMapper.updateEntity(user, request);
         applyUserInfoPatch(user, request);
         user = userRepository.save(user);
-        userEventProducer.publishUserUpdated(user);
+        outboxService.enqueueEvent(
+                "USER",
+                user.getId().toString(),
+                UserUpdatedEvent.of(
+                        user.getId(),
+                        user.getUsername(),
+                        user.getEmail(),
+                        user.getStatus(),
+                        user.getRole().name()
+                )
+        );
 
         return userMapper.toResponse(user);
     }
@@ -138,18 +162,23 @@ public class UserService {
 
     @Transactional
     @CachePut(value = CacheConfig.USER_CACHE_NAME, key = "#id")
-    public UserResponse updateStatus(Long id, UpdateStatusRequest request) {
+    public UserResponse updateStatus(UUID id, UpdateStatusRequest request) {
         User user = getUserOrElseThrow(id);
         if (user.getStatus() == UserStatus.DELETED) {
             throw new UserDeletedException(id);
         }
 
         UserStatus previousStatus = user.getStatus();
-        user.setStatus(request.status());
+        var newStatus = request.status();
+        user.setStatus(newStatus);
         user = userRepository.save(user);
 
-        if (previousStatus != request.status()) {
-            userEventProducer.publishStatusChanged(id, previousStatus, request.status());
+        if (previousStatus != newStatus) {
+            outboxService.enqueueEvent(
+                    "USER",
+                    user.getId().toString(),
+                    UserStatusChangedEvent.of(id, previousStatus, newStatus)
+            );
         }
 
         return userMapper.toResponse(user);
@@ -157,7 +186,7 @@ public class UserService {
 
     @Transactional
     @CacheEvict(value = CacheConfig.USER_CACHE_NAME, key = "#id")
-    public void deleteUser(Long id) {
+    public void deleteUser(UUID id) {
         User user = getUserOrElseThrow(id);
         if (user.getStatus() == UserStatus.DELETED) {
             throw new UserDeletedException(id);
@@ -166,6 +195,10 @@ public class UserService {
         user.setStatus(UserStatus.DELETED);
         user.setDeletedAt(java.time.Instant.now());
         userRepository.save(user);
-        userEventProducer.publishUserDeleted(id);
+        outboxService.enqueueEvent(
+                "USER",
+                user.getId().toString(),
+                UserDeletedEvent.of(id)
+        );
     }
 }

@@ -6,7 +6,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 
 import java.time.Duration;
 
-@ConfigurationProperties(prefix = "meeting.redis")
+@ConfigurationProperties(prefix = "user.redis")
 @Getter
 @Setter
 public class RedisProperties {

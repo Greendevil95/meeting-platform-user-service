@@ -15,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.UUID;
 
 @Component
 @RequiredArgsConstructor
@@ -47,7 +48,7 @@ public class UserDeletionJob {
                 break;
             }
 
-            List<Long> userIds = usersToDelete.stream()
+            List<UUID> userIds = usersToDelete.stream()
                     .map(User::getId)
                     .toList();
 

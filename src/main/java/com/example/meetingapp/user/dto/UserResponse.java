@@ -4,9 +4,10 @@ import com.example.meetingapp.user.entity.Role;
 import com.example.meetingapp.user.entity.UserStatus;
 
 import java.time.Instant;
+import java.util.UUID;
 
 public record UserResponse(
-        Long id,
+        UUID id,
         String username,
         String email,
         UserStatus status,

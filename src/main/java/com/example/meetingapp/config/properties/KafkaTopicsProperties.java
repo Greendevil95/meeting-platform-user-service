@@ -4,7 +4,7 @@ import lombok.Getter;
 import lombok.Setter;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
-@ConfigurationProperties(prefix = "kafka.topics.user-service")
+@ConfigurationProperties(prefix = "user.kafka.topics.user-service")
 @Getter
 @Setter
 public class KafkaTopicsProperties {

@@ -1,3 +1,6 @@
+server:
+  port: 8081
+
 app:
   user:
     deletion-retention-days: 30
@@ -48,7 +51,7 @@ spring:
 logging:
   level:
    org.hibernate.SQL: DEBUG
-   org.hibernate.orm.jdbc.bind: TRACE
+   org.hibernate.orm.jdbc.bind: OFF
 
 user:
   redis:
@@ -58,7 +61,7 @@ user:
       user-service-prefix: user-service
     topics:
       user-service:
-        user-created: ${kafka.prefixes.user-service-prefix}.user-created
-        user-updated: ${kafka.prefixes.user-service-prefix}.user-updated
-        user-deleted: ${kafka.prefixes.user-service-prefix}.user-deleted
-        user-status-changed: ${kafka.prefixes.user-service-prefix}.user-status-changed
+        user-created: ${user.kafka.prefixes.user-service-prefix}.user-created
+        user-updated: ${user.kafka.prefixes.user-service-prefix}.user-updated
+        user-deleted: ${user.kafka.prefixes.user-service-prefix}.user-deleted
+        user-status-changed: ${user.kafka.prefixes.user-service-prefix}.user-status-changed

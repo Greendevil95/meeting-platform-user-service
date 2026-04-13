@@ -3,8 +3,10 @@ package com.example.meetingapp.user.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UuidGenerator;
 
 import java.time.Instant;
+import java.util.UUID;
 
 @Entity
 @Table(name = "users")
@@ -14,8 +16,8 @@ import java.time.Instant;
 public class User {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @UuidGenerator
+    private UUID id;
 
     @Column(name = "username", nullable = false, unique = true, length = 50)
     private String username;

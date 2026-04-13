@@ -6,6 +6,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.time.LocalDate;
+import java.util.UUID;
 
 @Entity
 @Table(name = "users_info")
@@ -16,7 +17,7 @@ public class UserInfo {
 
     @Id
     @Column(name = "user_id")
-    private Long id;
+    private UUID id;
 
     @OneToOne(fetch = FetchType.LAZY)
     @MapsId

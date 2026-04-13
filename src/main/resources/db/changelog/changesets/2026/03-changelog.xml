@@ -7,7 +7,7 @@
 
     <changeSet id="2026-03-09" author="Denis Bondarev">
         <createTable tableName="users">
-            <column name="id" type="BIGINT" autoIncrement="true">
+            <column name="id" type="UUID">
                 <constraints primaryKey="true" nullable="false"/>
             </column>
             <column name="username" type="VARCHAR(50)">
@@ -29,7 +29,7 @@
         </createTable>
 
         <createTable tableName="users_info">
-            <column name="user_id" type="BIGINT">
+            <column name="user_id" type="UUID">
                 <constraints primaryKey="true" nullable="false"/>
             </column>
             <column name="first_name" type="VARCHAR(50)">
