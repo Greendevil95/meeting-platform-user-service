@@ -14,7 +14,9 @@ public interface UserMapper {
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "status", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
+    @Mapping(target = "deletedAt", ignore = true)
     @Mapping(target = "role", ignore = true)
+    @Mapping(target = "version", ignore = true)
     @Mapping(target = "userInfo", ignore = true)
     User toEntity(CreateUserRequest request);
 
@@ -31,7 +33,9 @@ public interface UserMapper {
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "status", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
+    @Mapping(target = "deletedAt", ignore = true)
     @Mapping(target = "role", ignore = true)
+    @Mapping(target = "version", ignore = true)
     @Mapping(target = "userInfo", ignore = true)
     void updateEntity(@MappingTarget User user, UpdateUserRequest request);
 

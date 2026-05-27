@@ -25,7 +25,6 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.OffsetDateTime;
 import java.util.UUID;
 
 @Service
@@ -49,6 +48,7 @@ public class UserService {
         User user = userMapper.toEntity(request);
         user.setStatus(UserStatus.ACTIVE);
         user.setRole(Role.USER);
+        user.setVersion(1L);
 
         UserInfo userInfo = userMapper.toUserInfo(request);
         userInfo.setUser(user);
@@ -63,7 +63,8 @@ public class UserService {
                         user.getUsername(),
                         user.getEmail(),
                         user.getStatus(),
-                        user.getRole().name()
+                        user.getRole().name(),
+                        user.getVersion()
                 )
         );
 
@@ -117,6 +118,7 @@ public class UserService {
 
         userMapper.updateEntity(user, request);
         applyUserInfoPatch(user, request);
+        user.setVersion(user.getVersion() + 1);
         user = userRepository.save(user);
         outboxService.enqueueEvent(
                 "USER",
@@ -126,7 +128,8 @@ public class UserService {
                         user.getUsername(),
                         user.getEmail(),
                         user.getStatus(),
-                        user.getRole().name()
+                        user.getRole().name(),
+                        user.getVersion()
                 )
         );
 
@@ -170,16 +173,18 @@ public class UserService {
 
         UserStatus previousStatus = user.getStatus();
         var newStatus = request.status();
+        if (previousStatus == newStatus) {
+            return userMapper.toResponse(user);
+        }
         user.setStatus(newStatus);
+        user.setVersion(user.getVersion() + 1);
         user = userRepository.save(user);
 
-        if (previousStatus != newStatus) {
-            outboxService.enqueueEvent(
-                    "USER",
-                    user.getId().toString(),
-                    UserStatusChangedEvent.of(id, previousStatus, newStatus)
-            );
-        }
+        outboxService.enqueueEvent(
+                "USER",
+                user.getId().toString(),
+                UserStatusChangedEvent.of(id, previousStatus, newStatus, user.getVersion())
+        );
 
         return userMapper.toResponse(user);
     }
@@ -194,11 +199,12 @@ public class UserService {
 
         user.setStatus(UserStatus.DELETED);
         user.setDeletedAt(java.time.Instant.now());
-        userRepository.save(user);
+        user.setVersion(user.getVersion() + 1);
+        user = userRepository.save(user);
         outboxService.enqueueEvent(
                 "USER",
                 user.getId().toString(),
-                UserDeletedEvent.of(id)
+                UserDeletedEvent.of(id, user.getVersion())
         );
     }
 }

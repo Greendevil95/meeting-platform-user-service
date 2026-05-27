@@ -40,6 +40,9 @@ public class User {
     @Column(name = "role", nullable = false, length = 50)
     private Role role;
 
+    @Column(name = "version", nullable = false)
+    private long version;
+
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
     private UserInfo userInfo;
 }
