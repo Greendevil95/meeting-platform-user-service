@@ -48,13 +48,12 @@ public class UserService {
         User user = userMapper.toEntity(request);
         user.setStatus(UserStatus.ACTIVE);
         user.setRole(Role.USER);
-        user.setVersion(1L);
 
         UserInfo userInfo = userMapper.toUserInfo(request);
         userInfo.setUser(user);
         user.setUserInfo(userInfo);
 
-        user = userRepository.save(user);
+        user = userRepository.saveAndFlush(user);
         outboxService.enqueueEvent(
                 "USER",
                 user.getId().toString(),
@@ -118,8 +117,7 @@ public class UserService {
 
         userMapper.updateEntity(user, request);
         applyUserInfoPatch(user, request);
-        user.setVersion(user.getVersion() + 1);
-        user = userRepository.save(user);
+        user = userRepository.saveAndFlush(user);
         outboxService.enqueueEvent(
                 "USER",
                 user.getId().toString(),
@@ -177,8 +175,7 @@ public class UserService {
             return userMapper.toResponse(user);
         }
         user.setStatus(newStatus);
-        user.setVersion(user.getVersion() + 1);
-        user = userRepository.save(user);
+        user = userRepository.saveAndFlush(user);
 
         outboxService.enqueueEvent(
                 "USER",
@@ -199,8 +196,7 @@ public class UserService {
 
         user.setStatus(UserStatus.DELETED);
         user.setDeletedAt(java.time.Instant.now());
-        user.setVersion(user.getVersion() + 1);
-        user = userRepository.save(user);
+        user = userRepository.saveAndFlush(user);
         outboxService.enqueueEvent(
                 "USER",
                 user.getId().toString(),

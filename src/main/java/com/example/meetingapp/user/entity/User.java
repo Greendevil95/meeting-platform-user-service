@@ -40,6 +40,7 @@ public class User {
     @Column(name = "role", nullable = false, length = 50)
     private Role role;
 
+    @Version
     @Column(name = "version", nullable = false)
     private long version;
 

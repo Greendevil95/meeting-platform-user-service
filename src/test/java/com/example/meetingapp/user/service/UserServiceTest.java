@@ -66,17 +66,20 @@ class UserServiceTest {
         when(userRepository.existsByEmail(request.email())).thenReturn(false);
         when(userMapper.toEntity(request)).thenReturn(user);
         when(userMapper.toUserInfo(request)).thenReturn(userInfo);
-        when(userRepository.save(user)).thenReturn(user);
+        when(userRepository.saveAndFlush(user)).thenAnswer(invocation -> {
+            user.setVersion(0L);
+            return user;
+        });
         when(userMapper.toResponse(user)).thenReturn(response);
 
         UserResponse actual = userService.createUser(request);
 
         assertSame(response, actual);
-        assertEquals(1L, user.getVersion());
+        assertEquals(0L, user.getVersion());
 
         ArgumentCaptor<UserCreatedEvent> eventCaptor = ArgumentCaptor.forClass(UserCreatedEvent.class);
         verify(outboxService).enqueueEvent(eq("USER"), eq(user.getId().toString()), eventCaptor.capture());
-        assertEquals(1L, eventCaptor.getValue().version());
+        assertEquals(0L, eventCaptor.getValue().version());
         assertEquals(user.getId(), eventCaptor.getValue().userId());
     }
 
@@ -93,7 +96,10 @@ class UserServiceTest {
         when(userRepository.findById(userId)).thenReturn(Optional.of(user));
         when(userRepository.existsByUsername(request.username())).thenReturn(false);
         when(userRepository.existsByEmail(request.email())).thenReturn(false);
-        when(userRepository.save(user)).thenReturn(user);
+        when(userRepository.saveAndFlush(user)).thenAnswer(invocation -> {
+            user.setVersion(5L);
+            return user;
+        });
         when(userMapper.toResponse(user)).thenReturn(response);
 
         UserResponse actual = userService.updateUser(userId, request);
@@ -125,13 +131,40 @@ class UserServiceTest {
     }
 
     @Test
+    void updateStatus_usesFlushedAggregateVersionInPublishedEvent() {
+        UUID userId = UUID.randomUUID();
+        User user = userWithVersion(7L, UserStatus.ACTIVE);
+        user.setId(userId);
+        UserResponse response = new UserResponse(userId, user.getUsername(), user.getEmail(), UserStatus.INACTIVE, user.getRole(), null, null);
+
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(userRepository.saveAndFlush(user)).thenAnswer(invocation -> {
+            user.setVersion(8L);
+            return user;
+        });
+        when(userMapper.toResponse(user)).thenReturn(response);
+
+        UserResponse actual = userService.updateStatus(userId, new UpdateStatusRequest(UserStatus.INACTIVE));
+
+        assertSame(response, actual);
+        assertEquals(8L, user.getVersion());
+
+        ArgumentCaptor<UserStatusChangedEvent> eventCaptor = ArgumentCaptor.forClass(UserStatusChangedEvent.class);
+        verify(outboxService).enqueueEvent(eq("USER"), eq(userId.toString()), eventCaptor.capture());
+        assertEquals(8L, eventCaptor.getValue().version());
+    }
+
+    @Test
     void deleteUser_incrementsAggregateVersionAndPublishesIt() {
         UUID userId = UUID.randomUUID();
         User user = userWithVersion(2L, UserStatus.ACTIVE);
         user.setId(userId);
 
         when(userRepository.findById(userId)).thenReturn(Optional.of(user));
-        when(userRepository.save(user)).thenReturn(user);
+        when(userRepository.saveAndFlush(user)).thenAnswer(invocation -> {
+            user.setVersion(3L);
+            return user;
+        });
 
         userService.deleteUser(userId);
 
