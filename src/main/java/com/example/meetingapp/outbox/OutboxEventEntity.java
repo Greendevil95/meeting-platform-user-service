@@ -46,6 +46,9 @@ public class OutboxEventEntity {
     @Column(name = "retry_count", nullable = false)
     private int retryCount;
 
+    @Column(name = "traceparent", length = 55)
+    private String traceparent;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false)
     private OffsetDateTime createdAt;

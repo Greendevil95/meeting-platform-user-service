@@ -32,7 +32,9 @@ public class OutboxPublisher {
         for (OutboxEventEntity event : pending) {
             try {
                 UserEvent kafkaEvent = jsonMapper.convertValue(event.getEventJson(), event.getEventType().eventClass());
-                kafkaTemplate.send(resolveTopic(event.getEventType()), event.getAggregateId(), kafkaEvent).get();
+                try (var ignored = OutboxTraceContext.makeCurrent(event.getTraceparent())) {
+                    kafkaTemplate.send(resolveTopic(event.getEventType()), event.getAggregateId(), kafkaEvent).get();
+                }
                 event.setStatus(OutboxStatus.PUBLISHED);
                 event.setPublishedAt(OffsetDateTime.now());
                 outboxEventRepository.save(event);
